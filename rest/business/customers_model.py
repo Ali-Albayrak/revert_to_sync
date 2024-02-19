@@ -22,7 +22,7 @@ class CustomManager(Manager):
             new_data = kwargs.get("new_data", {})
             old_data = kwargs.get("old_data", {})
             well_known_urls = kwargs.get("well_known_urls", {})
-            new_data = await attach_customer_to_new_user.handler(jwt=jwt, new_data=new_data, old_data=old_data, well_known_urls=well_known_urls, method="create")
+            new_data = attach_customer_to_new_user.handler(jwt=jwt, new_data=new_data, old_data=old_data, well_known_urls=well_known_urls, method="create")
             return new_data
         except Exception as err:
             log.warn("at least one step in pre_create trigger has been skipped")
@@ -36,7 +36,7 @@ class CustomManager(Manager):
             new_data = kwargs.get("new_data", {})
             old_data = kwargs.get("old_data", {})
             well_known_urls = kwargs.get("well_known_urls", {})
-            new_data = await create_brief_strategy_id.handler(jwt=jwt, new_data=new_data, old_data=old_data, well_known_urls=well_known_urls, method="create")
+            new_data = create_brief_strategy_id.handler(jwt=jwt, new_data=new_data, old_data=old_data, well_known_urls=well_known_urls, method="create")
             return new_data
         except Exception as err:
             log.warn("at least one step in post_create trigger has been skipped")
@@ -53,7 +53,7 @@ class CustomManager(Manager):
             new_data = kwargs.get("new_data", {})
             old_data = kwargs.get("old_data", {})
             well_known_urls = kwargs.get("well_known_urls", {})
-            new_data = await delete_user_after_customer.handler(jwt=jwt, new_data=new_data, old_data=old_data, well_known_urls=well_known_urls, method="delete")
+            new_data = delete_user_after_customer.handler(jwt=jwt, new_data=new_data, old_data=old_data, well_known_urls=well_known_urls, method="delete")
             return new_data
         except Exception as err:
             log.warn("at least one step in post_delete trigger has been skipped")
@@ -115,17 +115,17 @@ class CustomerModel(BaseModel):
 
     indication = Column(Enum(IndicationEnum), nullable=True, default=None)
 
-    briefs = relationship('BriefModel', back_populates='customer__details', lazy='subquery')
+    briefs = relationship('BriefModel', back_populates='customer__details')
 
-    strategies = relationship('StrategyModel', back_populates='customer__details', lazy='subquery')
+    strategies = relationship('StrategyModel', back_populates='customer__details')
 
-    appointments = relationship('AppointmentModel', back_populates='customer__details', lazy='subquery')
+    appointments = relationship('AppointmentModel', back_populates='customer__details')
 
-    file_assets = relationship('File_AssetModel', back_populates='customer__details', lazy='subquery')
+    file_assets = relationship('File_AssetModel', back_populates='customer__details')
 
-    folders = relationship('FolderModel', back_populates='customer__details', lazy='subquery')
+    folders = relationship('FolderModel', back_populates='customer__details')
 
-    designs = relationship('DesignModel', back_populates='customer__details', lazy='subquery')
+    designs = relationship('DesignModel', back_populates='customer__details')
 
 
     user = Column(UUID(as_uuid=True), ForeignKey("public.users.id"))
@@ -141,11 +141,10 @@ class CustomerModel(BaseModel):
 
     @classmethod
     async def validate_unique_brand_name(cls, db, brand_name, id=None):
-        query = select(cls).where(cls.brand_name==brand_name)
+        query = db.query(cls).filter_by(brand_name=brand_name)
         if id is not None:
-            query = query.where(cls.id != id)
-        result = await db.execute(query)
-        existing_record = result.scalars().first()
+            query = query.filter(cls.id != id)
+        existing_record = query.first()
         if existing_record:
             raise HTTPException(status_code=422, detail={
                 "field_name": "brand_name",
@@ -153,11 +152,15 @@ class CustomerModel(BaseModel):
             })
     @classmethod
     async def validate_unique_business_number(cls, db, business_number, id=None):
-        query = select(cls).where(cls.business_number==business_number)
+        # query = select(cls).where(cls.business_number==business_number)
+        query = db.query(cls).filter_by(business_number=business_number)
         if id is not None:
-            query = query.where(cls.id != id)
-        result = await db.execute(query)
-        existing_record = result.scalars().first()
+            query = query.filter(cls.id != id)
+        existing_record = query.first()
+        # if id is not None:
+        #     query = query.where(cls.id != id)
+        # result = await db.execute(query)
+        # existing_record = result.scalars().first()
         if existing_record:
             raise HTTPException(status_code=422, detail={
                 "field_name": "business_number",

@@ -1,6 +1,8 @@
 import json
 from core.logger import log
-from sqlalchemy.ext.asyncio import AsyncSession 
+# from sqlalchemy.ext.asyncio import AsyncSession
+ 
+from sqlalchemy.orm import Session
 from sqlalchemy import select, delete, update, insert
 from core.depends import current_user_roles, current_user_uuid, get_async_db
 
@@ -9,7 +11,7 @@ class Manager:
     A generic database interaction class for handling CRUD operations on a specified model.
     """
 
-    def __init__(self, model, database: AsyncSession):
+    def __init__(self, model, database: Session):
         if not database:
             database = next(get_async_db())
         self.db = database
@@ -17,7 +19,7 @@ class Manager:
         self._query = {}  # Instantiate a query, update it on get/filter call
 
     @classmethod
-    async def async_init(cls, model, database: AsyncSession):
+    async def async_init(cls, model, database: Session):
         """
         Asynchronously initialize an instance of the class
         """
@@ -29,8 +31,8 @@ class Manager:
         """
         Set session variables for the instance
         """
-        await self.db.execute(f"SET zekoder.id = '{current_user_uuid()}'")
-        await self.db.execute(f"SET zekoder.roles = '{','.join(current_user_roles())}'")
+        self.db.execute(f"SET zekoder.id = '{current_user_uuid()}'")
+        self.db.execute(f"SET zekoder.roles = '{','.join(current_user_roles())}'")
 
     def __str__(self):
         """
@@ -43,7 +45,7 @@ class Manager:
         Return the number of records in the database based on the current query.
         """
         data = await self.__fetch()
-        return len(data.scalars().all())
+        return len(data)
     
     
     async def __iter__(self):
@@ -51,7 +53,7 @@ class Manager:
         Iterate over the records fetched from the database based on the current query.
         """
         data = await self.__fetch()
-        for obj in data.scalars().all():
+        for obj in data:
             yield obj
 
     def __getitem__(self, item):
@@ -70,7 +72,7 @@ class Manager:
         """
         Asynchronously fetch records from the database based on the current query.
         """
-        return await self.db.execute(select(self.Model).filter_by(**self._query))
+        return self.db.query(self.Model).filter_by(**self._query)
     
     async def get(self, **query):
         """
@@ -78,13 +80,17 @@ class Manager:
         """
         self.update_query(query)
         data = await self.__fetch()
-        return data.scalars().first()
-    
-    def get_multiple(self, obj_ids):
+        return data.first()
+
+    #####################
+    # Check this method #
+    #####################
+    async def get_multiple(self, obj_ids):
         """
         Get a multi records from the database based on the provided IDs.
         """
-        return self.__fetch().filter(self.Model.id.in_(obj_ids)).all()
+        data = await self.__fetch()
+        return data.filter(self.Model.id.in_(obj_ids)).all()
 
     def filter(self, **query):
         """
@@ -116,8 +122,8 @@ class Manager:
         Save changes to the database after adding a new record.
         """
         self.db.add(obj)
-        await self.db.commit()
-        await self.db.refresh(obj)
+        self.db.commit()
+        self.db.refresh(obj)
 
     async def update(self, obj_id, **kwargs):
         """
@@ -126,18 +132,20 @@ class Manager:
         model_data = kwargs.get("model_data", {})
         if kwargs.get("signal_data"):
             model_data.update(await self.pre_update(**kwargs["signal_data"]))
-        statement = update(self.Model)\
-                    .filter(self.Model.id == obj_id)\
-                    .values(model_data)\
-                    .returning(self.Model.__table__)
+        # statement = update(self.Model)\
+        #             .filter(self.Model.id == obj_id)\
+        #             .values(model_data)\
+        #             .returning(self.Model.__table__)
         
-        updated_row = await self.db.execute(statement)
-        await self.db.commit()
+        # updated_row = await self.db.execute(statement)
+        # await self.db.commit()
+        self.db.query(self.Model).filter(self.Model.id == obj_id).update(model_data)
+        self.db.commit()
 
         if kwargs.get("signal_data"):
             kwargs.get("signal_data")["new_data"] = model_data
             await self.post_update(**kwargs["signal_data"])
-        return updated_row
+        # return updated_row
 
     async def delete(self, obj_id, **kwargs):
         """
@@ -149,8 +157,8 @@ class Manager:
         if not is_delete:
             return
         
-        await self.db.execute(delete(self.Model).filter(self.Model.id == obj_id))
-        await self.db.commit()
+        self.db.query(self.Model).filter(self.Model.id == obj_id).delete()
+        self.db.commit()
         
         if kwargs.get("signal_data"):
             kwargs.get("signal_data")["new_data"] = is_delete
@@ -168,9 +176,9 @@ class Manager:
                 is_delete = await self.pre_delete(**kwargs["signal_data"])
         if not is_delete:
             return
-  
-        await self.db.execute(delete(self.Model).filter(self.Model.id.in_(obj_ids)))
-        await self.db.commit()
+
+        self.db.query(self.Model).filter(self.Model.id.in_(obj_ids)).delete(synchronize_session=False)
+        self.db.commit()
 
         if kwargs.get("signal_data"):
             kwargs.get("signal_data")["new_data"] = is_delete
@@ -221,5 +229,4 @@ class Manager:
         """
         self.update_query(query)
         data = await self.__fetch()
-        data = data.scalars().all()
-        return data[offset*limit:(offset+1)*limit]
+        return data.offset(offset).limit(limit).all()
