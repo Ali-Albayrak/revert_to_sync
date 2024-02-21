@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 
-from business import db_sync_session #, db_async_session
+from business import db_sync_session
 from core.logger import log
 
 auth_schema = HTTPBearer()
