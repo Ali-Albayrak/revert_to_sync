@@ -3,8 +3,6 @@ from typing import Union, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query as QueryParam
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-# from sqlalchemy.ext.asyncio import AsyncSession
-
 from sqlalchemy.exc import IntegrityError
 from starlette.status import HTTP_204_NO_CONTENT, HTTP_200_OK, HTTP_201_CREATED
 

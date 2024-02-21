@@ -82,9 +82,6 @@ class Manager:
         data = await self.__fetch()
         return data.first()
 
-    #####################
-    # Check this method #
-    #####################
     async def get_multiple(self, obj_ids):
         """
         Get a multi records from the database based on the provided IDs.
@@ -132,20 +129,13 @@ class Manager:
         model_data = kwargs.get("model_data", {})
         if kwargs.get("signal_data"):
             model_data.update(await self.pre_update(**kwargs["signal_data"]))
-        # statement = update(self.Model)\
-        #             .filter(self.Model.id == obj_id)\
-        #             .values(model_data)\
-        #             .returning(self.Model.__table__)
-        
-        # updated_row = await self.db.execute(statement)
-        # await self.db.commit()
+
         self.db.query(self.Model).filter(self.Model.id == obj_id).update(model_data)
         self.db.commit()
 
         if kwargs.get("signal_data"):
             kwargs.get("signal_data")["new_data"] = model_data
             await self.post_update(**kwargs["signal_data"])
-        # return updated_row
 
     async def delete(self, obj_id, **kwargs):
         """
