@@ -21,32 +21,6 @@ if zeauth_url is None:
 user_session: ContextVar[str] = ContextVar('user_session', default=None)
 user_roles: ContextVar[list] = ContextVar('user_roles', default=[])
 
-async def get_async_db():
-    """
-    Return async engine to interact with datbase
-    # async session is not supported by the current version of sqlalchemy (during mongosql integration)
-    # so we are using the sync engine for now
-    # this is a temporary fix
-    """
-    db = db_sync_session()
-    try:
-        # set session variables
-        db.execute(f"SET zekoder.id = '{current_user_uuid()}'")
-        db.execute(f"SET zekoder.roles = '{','.join(current_user_roles())}'")
-        yield db
-    finally:
-        db.close()
-
-    # async with db_async_session() as db:
-    #     try:
-    #         # set session variables
-    #         await db.execute(f"SET zekoder.id = '{current_user_uuid()}'")
-    #         await db.execute(f"SET zekoder.roles = '{','.join(current_user_roles())}'")
-
-    #         yield db
-    #     finally:
-    #         await db.close()
-
 def get_sync_db():
     """
     Return sync engine to interact with datbase

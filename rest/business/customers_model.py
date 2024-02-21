@@ -152,15 +152,10 @@ class CustomerModel(BaseModel):
             })
     @classmethod
     async def validate_unique_business_number(cls, db, business_number, id=None):
-        # query = select(cls).where(cls.business_number==business_number)
         query = db.query(cls).filter_by(business_number=business_number)
         if id is not None:
             query = query.filter(cls.id != id)
         existing_record = query.first()
-        # if id is not None:
-        #     query = query.where(cls.id != id)
-        # result = await db.execute(query)
-        # existing_record = result.scalars().first()
         if existing_record:
             raise HTTPException(status_code=422, detail={
                 "field_name": "business_number",

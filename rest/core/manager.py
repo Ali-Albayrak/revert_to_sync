@@ -4,7 +4,7 @@ from core.logger import log
  
 from sqlalchemy.orm import Session
 from sqlalchemy import select, delete, update, insert
-from core.depends import current_user_roles, current_user_uuid, get_async_db
+from core.depends import current_user_roles, current_user_uuid, get_sync_db
 
 class Manager:
     """
@@ -13,7 +13,7 @@ class Manager:
 
     def __init__(self, model, database: Session):
         if not database:
-            database = next(get_async_db())
+            database = next(get_sync_db())
         self.db = database
         self.Model = model
         self._query = {}  # Instantiate a query, update it on get/filter call
