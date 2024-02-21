@@ -1,7 +1,5 @@
 import json
 from core.logger import log
-# from sqlalchemy.ext.asyncio import AsyncSession
- 
 from sqlalchemy.orm import Session
 from sqlalchemy import select, delete, update, insert
 from core.depends import current_user_roles, current_user_uuid, get_sync_db
