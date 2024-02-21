@@ -8,31 +8,18 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 
-from business import db_async_session, db_sync_session
+from business import db_sync_session
 from core.logger import log
 
 auth_schema = HTTPBearer()
 
 zeauth_url = os.environ.get('ZEAUTH_URI')
+zeauth_url = "https://auth.dev.zekoder.net"
 if zeauth_url is None:
     raise ValueError("ZEAUTH_URI environment variable is not set. Please set it before running the application.")
 
 user_session: ContextVar[str] = ContextVar('user_session', default=None)
 user_roles: ContextVar[list] = ContextVar('user_roles', default=[])
-
-async def get_async_db():
-    """
-    Return async engine to interact with datbase
-    """
-    async with db_async_session() as db:
-        try:
-            # set session variables
-            await db.execute(f"SET zekoder.id = '{current_user_uuid()}'")
-            await db.execute(f"SET zekoder.roles = '{','.join(current_user_roles())}'")
-
-            yield db
-        finally:
-            await db.close()
 
 def get_sync_db():
     """

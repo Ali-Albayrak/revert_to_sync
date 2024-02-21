@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from core.logger import log
 from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+# from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from mongosql import MongoSqlBase
 
 Base = declarative_base(cls=(MongoSqlBase,))
@@ -26,7 +26,7 @@ DB_ASYNC_DRIVER = os.environ.get('ASYNC_DB_DRIVER', 'postgresql+asyncpg')
 SYNC_DB_QUERY_PARAMS = os.environ.get('SYNC_DB_QUERY_PARAMS', 'sslmode=disable')
 ASYNC_DB_QUERY_PARAMS = os.environ.get('ASYNC_DB_QUERY_PARAMS', 'ssl=disable')
 
-db_async_url = f'{DB_ASYNC_DRIVER}://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?{ASYNC_DB_QUERY_PARAMS}'
+# db_async_url = f'{DB_ASYNC_DRIVER}://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?{ASYNC_DB_QUERY_PARAMS}'
 db_sync_url = f'{DB_SYNC_DRIVER}://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?{SYNC_DB_QUERY_PARAMS}'
 
 engine_args = {
@@ -37,5 +37,5 @@ engine_args = {
 }
 engine_sync = create_engine(db_sync_url, echo=True, **engine_args)
 db_sync_session: Session = sessionmaker(bind=engine_sync, expire_on_commit=False)
-engine_async = create_async_engine(db_async_url, echo=True, **engine_args)
-db_async_session: AsyncSession = sessionmaker(bind=engine_async, expire_on_commit=False, class_=AsyncSession)
+# engine_async = create_async_engine(db_async_url, echo=True, **engine_args)
+# db_async_session: AsyncSession = sessionmaker(bind=engine_async, expire_on_commit=False, class_=AsyncSession)

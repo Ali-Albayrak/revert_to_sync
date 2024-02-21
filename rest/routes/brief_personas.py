@@ -3,14 +3,13 @@ from typing import Union, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query as QueryParam
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from starlette.status import HTTP_204_NO_CONTENT, HTTP_200_OK, HTTP_201_CREATED
 
 from business.brief_personas_schema import *
 from business.brief_personas_model import Brief_PersonaModel
 
-from core.depends import CommonDependencies, get_async_db, get_sync_db, Protect, zeauth_url
+from core.depends import CommonDependencies, get_sync_db, Protect, zeauth_url
 from core.logger import log
 from core.query import *
 
@@ -23,7 +22,7 @@ router = APIRouter()
 
 # list brief_personas
 @router.get('/', tags=['brief_personas'], status_code=HTTP_200_OK, summary="List brief_personas", response_model=ReadBrief_Personas)
-async def list(request: Request, token: str = Depends(Protect), db: AsyncSession = Depends(get_async_db), commons: CommonDependencies = Depends(CommonDependencies)):
+async def list(request: Request, token: str = Depends(Protect), db: Session = Depends(get_sync_db), commons: CommonDependencies = Depends(CommonDependencies)):
 
     token.auth(['zekoder-new_verion-brief_personas-list', 'zekoder-new_verion-brief_personas-get'])
     try:
@@ -43,7 +42,7 @@ list.__doc__ = f" List brief_personas".expandtabs()
 
 # get brief_persona
 @router.get('/brief_persona_id', tags=['brief_personas'], status_code=HTTP_200_OK, summary="Get brief_persona with ID", response_model=ReadBrief_Persona)
-async def get(request: Request, brief_persona_id: str, db: AsyncSession = Depends(get_async_db), token: str = Depends(Protect)):
+async def get(request: Request, brief_persona_id: str, db: Session = Depends(get_sync_db), token: str = Depends(Protect)):
 
     token.auth(['zekoder-new_verion-brief_personas-list', 'zekoder-new_verion-brief_personas-get'])
     try:
@@ -101,7 +100,7 @@ async def query(request: Request, q: QuerySchema, db: Session = Depends(get_sync
 
 # create brief_persona
 @router.post('/', tags=['brief_personas'], status_code=HTTP_201_CREATED, summary="Create new brief_persona", response_model=ReadBrief_Persona)
-async def create(request: Request, brief_persona: CreateBrief_Persona, db: AsyncSession = Depends(get_async_db), token: str = Depends(Protect)):
+async def create(request: Request, brief_persona: CreateBrief_Persona, db: Session = Depends(get_sync_db), token: str = Depends(Protect)):
 
     token.auth(['zekoder-new_verion-brief_personas-create'])
 
@@ -132,7 +131,7 @@ create.__doc__ = f" Create a new brief_persona".expandtabs()
 
 # create multiple brief_personas
 @router.post('/add-brief_personas', tags=['brief_personas'], status_code=HTTP_201_CREATED, summary="Create multiple brief_personas", response_model=List[ReadBrief_Persona])
-async def create_multiple_brief_personas(request: Request, brief_personas: List[CreateBrief_Persona], db: AsyncSession = Depends(get_async_db), token: str = Depends(Protect)):
+async def create_multiple_brief_personas(request: Request, brief_personas: List[CreateBrief_Persona], db: Session = Depends(get_sync_db), token: str = Depends(Protect)):
 
     token.auth(['zekoder-new_verion-brief_personas-create'])
 
@@ -170,7 +169,7 @@ create.__doc__ = f" Create multiple new brief_personas".expandtabs()
 
 # upsert multiple brief_personas
 @router.post('/upsert-multiple-brief_personas', tags=['brief_personas'], status_code=HTTP_201_CREATED, summary="Upsert multiple brief_personas", response_model=List[ReadBrief_Persona])
-async def upsert_multiple_brief_personas(request: Request, brief_personas: List[CreateBrief_Persona], db: AsyncSession = Depends(get_async_db), token: str = Depends(Protect)):
+async def upsert_multiple_brief_personas(request: Request, brief_personas: List[CreateBrief_Persona], db: Session = Depends(get_sync_db), token: str = Depends(Protect)):
 
     token.auth(['zekoder-new_verion-brief_personas-create'])
     new_items, errors_info = [], []
@@ -192,7 +191,8 @@ async def upsert_multiple_brief_personas(request: Request, brief_personas: List[
                 if old_data:
                     kwargs['signal_data']['old_data'] = dict(old_data.__dict__) if old_data else {}
                     obj = await Brief_PersonaModel.objects(db)
-                    updated_brief_persona = await obj.update(obj_id=new_data['id'], **kwargs)
+                    await obj.update(obj_id=new_data['id'], **kwargs)
+                    updated_brief_personas = await obj.get(id=new_data['id'])
                     new_items.append(updated_brief_personas)
                 else:
                     obj = await Brief_PersonaModel.objects(db)
@@ -215,7 +215,7 @@ upsert_multiple_brief_personas.__doc__ = f" upsert multiple brief_personas".expa
 
 # update brief_persona
 @router.put('/brief_persona_id', tags=['brief_personas'], status_code=HTTP_201_CREATED, summary="Update brief_persona with ID")
-async def update(request: Request, brief_persona_id: Union[str, int], brief_persona: UpdateBrief_Persona, db: AsyncSession = Depends(get_async_db), token: str = Depends(Protect)):
+async def update(request: Request, brief_persona_id: Union[str, int], brief_persona: UpdateBrief_Persona, db: Session = Depends(get_sync_db), token: str = Depends(Protect)):
 
     token.auth(['zekoder-new_verion-brief_personas-update'])
     try:
@@ -232,7 +232,8 @@ async def update(request: Request, brief_persona_id: Union[str, int], brief_pers
             }
         }
         obj = await Brief_PersonaModel.objects(db)
-        result = await obj.update(obj_id=brief_persona_id, **kwargs)
+        await obj.update(obj_id=brief_persona_id, **kwargs)
+        result = await obj.get(id=brief_persona_id)
         return result
     except HTTPException as e:
         raise e
@@ -247,7 +248,7 @@ update.__doc__ = f" Update a brief_persona by its id and payload".expandtabs()
 
 # delete brief_persona
 @router.delete('/brief_persona_id', tags=['brief_personas'], status_code=HTTP_204_NO_CONTENT, summary="Delete brief_persona with ID", response_class=Response)
-async def delete(request: Request, brief_persona_id: Union[str, int], db: AsyncSession = Depends(get_async_db), token: str = Depends(Protect)):
+async def delete(request: Request, brief_persona_id: Union[str, int], db: Session = Depends(get_sync_db), token: str = Depends(Protect)):
 
     token.auth(['zekoder-new_verion-brief_personas-delete'])
     try:
@@ -275,11 +276,12 @@ delete.__doc__ = f" Delete a brief_persona by its id".expandtabs()
 
 # delete multiple brief_personas
 @router.delete('/delete-brief_personas', tags=['brief_personas'], status_code=HTTP_204_NO_CONTENT, summary="Delete multiple brief_personas with IDs", response_class=Response)
-async def delete_multiple_brief_personas(request: Request, brief_personas_id: List[str] = QueryParam(), db: AsyncSession = Depends(get_async_db), token: str = Depends(Protect)):
+async def delete_multiple_brief_personas(request: Request, brief_personas_id: List[str] = QueryParam(), db: Session = Depends(get_sync_db), token: str = Depends(Protect)):
 
     token.auth(['zekoder-new_verion-brief_personas-delete'])
     try:
-        all_old_data = Brief_PersonaModel.objects(db).get_multiple(obj_ids=brief_personas_id)
+        obj = await Brief_PersonaModel.objects(db)
+        all_old_data = await obj.get_multiple(obj_ids=brief_personas_id)
         if not all_old_data:
             return JSONResponse(content={"message": f"<{brief_personas_id}> record not found in brief_personas"}, status_code=400)
         kwargs = {
